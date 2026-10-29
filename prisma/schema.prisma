@@ -1,0 +1,118 @@
+// OpenResource Database Schema
+// Phase 2: Resource Management
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Resource Categories
+enum ResourceCategory {
+  THREE_D_PRINTING
+  LASER_CUTTING
+  CNC_MACHINING
+  ELECTRONICS_LAB
+  WOODWORKING
+  METALWORKING
+  PHOTOGRAPHY
+  VIDEO_PRODUCTION
+  COMPUTING
+  OTHER
+}
+
+// Resource Condition
+enum ResourceCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  NEEDS_MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+// Day of Week for availability
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+// User model (placeholder for integration with auth system)
+// This will be owned by the shared auth module
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  ownedResources Resource[]
+
+  @@index([email])
+  @@map("users")
+}
+
+// Main Resource model
+model Resource {
+  id                  String            @id @default(cuid())
+  name                String
+  description         String            @db.Text
+  category            ResourceCategory
+  location            String
+  imageUrl            String?
+
+  // Access requirements
+  requiredBadgeIds    String[]          @default([])
+  requiresSupervision Boolean           @default(false)
+  securityDeposit     Float             @default(0)
+  weeklyUsageCap      Int               @default(40) // hours per week
+
+  // Condition and status
+  currentCondition    ResourceCondition @default(GOOD)
+  isActive            Boolean           @default(true)
+
+  // Ownership
+  ownerId             String
+  owner               User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  // Relations
+  availability        AvailabilitySchedule[]
+
+  @@index([category])
+  @@index([location])
+  @@index([ownerId])
+  @@index([isActive])
+  @@map("resources")
+}
+
+// Availability Schedule for resources
+model AvailabilitySchedule {
+  id         String    @id @default(cuid())
+  resourceId String
+  resource   Resource  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  dayOfWeek  DayOfWeek
+  startTime  String    // Format: "HH:mm" (24-hour)
+  endTime    String    // Format: "HH:mm" (24-hour)
+
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([resourceId])
+  @@index([dayOfWeek])
+  @@map("availability_schedules")
+}
