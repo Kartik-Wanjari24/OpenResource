@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 
-// Standard error response format
+// Standard error response format matching team contract
 export interface ErrorResponse {
   error: {
     code: string;
@@ -13,46 +13,61 @@ export interface ErrorResponse {
   timestamp: string;
 }
 
-// Standard success response format
+// Standard success response format matching team contract
 export interface SuccessResponse<T = unknown> {
   success: true;
   data: T;
   timestamp: string;
 }
 
-// Error codes
-export enum ErrorCode {
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
-  UNAUTHORIZED = 'UNAUTHORIZED',
-  FORBIDDEN = 'FORBIDDEN',
-  CONFLICT = 'CONFLICT',
-  INTERNAL_ERROR = 'INTERNAL_ERROR',
-}
+// Standardized error codes (erasableSyntaxOnly compatible)
+export const ErrorCode = {
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
+  BOOKING_NOT_FOUND: 'BOOKING_NOT_FOUND',
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  FORBIDDEN: 'FORBIDDEN',
+  CONFLICT: 'CONFLICT',
+  INVALID_STATE_TRANSITION: 'INVALID_STATE_TRANSITION',
+  INVALID_CREDENTIAL: 'INVALID_CREDENTIAL',
+  EXPIRED_CREDENTIAL: 'EXPIRED_CREDENTIAL',
+  CREDENTIAL_ALREADY_USED: 'CREDENTIAL_ALREADY_USED',
+  MAX_ATTEMPTS_EXCEEDED: 'MAX_ATTEMPTS_EXCEEDED',
+  TIMING_VIOLATION: 'TIMING_VIOLATION',
+  PAYLOAD_TOO_LARGE: 'PAYLOAD_TOO_LARGE',
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+} as const;
 
-// Custom error class
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
+
+// Custom application error
 export class AppError extends Error {
+  public statusCode: number;
+  public code: ErrorCode | string;
+  public details?: Array<{ field?: string; message: string }>;
+
   constructor(
-    public statusCode: number,
-    public code: ErrorCode,
+    statusCode: number,
+    code: ErrorCode | string,
     message: string,
-    public details?: Array<{ field?: string; message: string }>
+    details?: Array<{ field?: string; message: string }>
   ) {
     super(message);
     this.name = 'AppError';
-    Error.captureStackTrace(this, this.constructor);
+    this.statusCode = statusCode;
+    this.code = code;
+    this.details = details;
+    Object.setPrototypeOf(this, AppError.prototype);
   }
 }
 
-// Error handler middleware
+// Global Express error handler middleware
 export const errorHandler = (
-  err: Error | AppError,
-  req: Request,
+  err: Error | AppError | any,
+  _req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
-  console.error('Error:', err);
-
   if (err instanceof AppError) {
     const response: ErrorResponse = {
       error: {
@@ -65,15 +80,39 @@ export const errorHandler = (
     return res.status(err.statusCode).json(response);
   }
 
-  // Default error response
+  // Handle body-parser payload size limit errors as 413 PAYLOAD_TOO_LARGE
+  if (err.type === 'entity.too.large' || err.status === 413 || err.statusCode === 413) {
+    const response: ErrorResponse = {
+      error: {
+        code: ErrorCode.PAYLOAD_TOO_LARGE,
+        message: 'Request payload exceeds maximum allowed size (100kb)',
+      },
+      timestamp: new Date().toISOString(),
+    };
+    return res.status(413).json(response);
+  }
+
+  // Handle body-parser JSON syntax errors gracefully as 400 VALIDATION_ERROR
+  if (err instanceof SyntaxError && 'status' in err && (err as any).status === 400) {
+    const response: ErrorResponse = {
+      error: {
+        code: ErrorCode.VALIDATION_ERROR,
+        message: 'Invalid JSON payload in request body',
+      },
+      timestamp: new Date().toISOString(),
+    };
+    return res.status(400).json(response);
+  }
+
+  console.error('Unhandled Server Error:', err);
   const response: ErrorResponse = {
     error: {
       code: ErrorCode.INTERNAL_ERROR,
-      message: 'An unexpected error occurred',
+      message: 'An unexpected internal error occurred',
     },
     timestamp: new Date().toISOString(),
   };
-  res.status(500).json(response);
+  return res.status(500).json(response);
 };
 
 // Success response helper

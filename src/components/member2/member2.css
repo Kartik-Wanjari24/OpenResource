@@ -1,0 +1,650 @@
+/* OpenResource - Member 2 Component Styles */
+
+/* ==========================================================================
+   Design Tokens & Scope
+   ========================================================================== */
+.m2-scope {
+  --m2-font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --m2-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  
+  --m2-bg-card: rgba(255, 255, 255, 0.85);
+  --m2-bg-elevated: rgba(248, 250, 252, 0.95);
+  --m2-border: var(--border, #e2e8f0);
+  --m2-text-main: var(--text-h, #0f172a);
+  --m2-text-muted: var(--text, #64748b);
+  
+  --m2-primary: var(--accent, #6366f1);
+  --m2-primary-hover: #4f46e5;
+  --m2-primary-subtle: rgba(99, 102, 241, 0.12);
+  
+  --m2-danger: #ef4444;
+  --m2-danger-subtle: rgba(239, 68, 68, 0.12);
+  --m2-warning: #f59e0b;
+  --m2-warning-subtle: rgba(245, 158, 11, 0.14);
+  --m2-success: #10b981;
+  --m2-success-subtle: rgba(16, 185, 129, 0.14);
+  --m2-info: #06b6d4;
+  --m2-info-subtle: rgba(6, 182, 212, 0.14);
+
+  --m2-radius-sm: 6px;
+  --m2-radius-md: 10px;
+  --m2-radius-lg: 16px;
+  --m2-radius-full: 9999px;
+  
+  --m2-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --m2-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --m2-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --m2-shadow-glow: 0 0 15px rgba(99, 102, 241, 0.25);
+  
+  font-family: var(--m2-font-sans);
+  color: var(--m2-text-main);
+  box-sizing: border-box;
+}
+
+@media (prefers-color-scheme: dark) {
+  .m2-scope {
+    --m2-bg-card: rgba(30, 41, 59, 0.7);
+    --m2-bg-elevated: rgba(15, 23, 42, 0.85);
+    --m2-border: rgba(51, 65, 85, 0.8);
+    --m2-text-main: #f8fafc;
+    --m2-text-muted: #94a3b8;
+  }
+}
+
+.m2-scope *,
+.m2-scope *::before,
+.m2-scope *::after {
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   Common Utilities & Components
+   ========================================================================== */
+.m2-card {
+  background: var(--m2-bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--m2-border);
+  border-radius: var(--m2-radius-lg);
+  box-shadow: var(--m2-shadow-md);
+  padding: 24px;
+  transition: all 0.2s ease-in-out;
+}
+
+.m2-card:hover {
+  box-shadow: var(--m2-shadow-lg);
+}
+
+.m2-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.m2-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--m2-text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.m2-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.875rem;
+  color: var(--m2-text-muted);
+}
+
+/* Buttons */
+.m2-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: var(--m2-radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+.m2-btn:focus-visible {
+  outline: 2px solid var(--m2-primary);
+  outline-offset: 2px;
+}
+
+.m2-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.m2-btn-primary {
+  background: var(--m2-primary);
+  color: #ffffff;
+}
+
+.m2-btn-primary:hover:not(:disabled) {
+  background: var(--m2-primary-hover);
+}
+
+.m2-btn-secondary {
+  background: var(--m2-bg-elevated);
+  border-color: var(--m2-border);
+  color: var(--m2-text-main);
+}
+
+.m2-btn-secondary:hover:not(:disabled) {
+  background: var(--m2-border);
+}
+
+.m2-btn-danger {
+  background: var(--m2-danger);
+  color: #ffffff;
+}
+
+.m2-btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.m2-btn-success {
+  background: var(--m2-success);
+  color: #ffffff;
+}
+
+.m2-btn-success:hover:not(:disabled) {
+  background: #059669;
+}
+
+.m2-btn-sm {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+}
+
+/* Badges & Status Pills */
+.m2-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--m2-radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.m2-status-REQUESTED {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.m2-status-ELIGIBILITY_VERIFIED {
+  background: rgba(6, 182, 212, 0.15);
+  color: #0891b2;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.m2-status-APPROVED {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.m2-status-WAITLISTED {
+  background: rgba(139, 92, 246, 0.15);
+  color: #7c3aed;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.m2-status-CHECKED_IN {
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.m2-status-RETURNED {
+  background: rgba(168, 85, 247, 0.15);
+  color: #9333ea;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.m2-status-INCIDENT_FLAGGED {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.m2-status-COMPLETED {
+  background: rgba(20, 184, 166, 0.15);
+  color: #0d9488;
+  border: 1px solid rgba(20, 184, 166, 0.3);
+}
+
+.m2-status-CANCELLED {
+  background: rgba(100, 116, 139, 0.15);
+  color: #64748b;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.m2-status-REJECTED {
+  background: rgba(244, 63, 94, 0.15);
+  color: #e11d48;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+/* Alert Banners */
+.m2-alert {
+  padding: 12px 16px;
+  border-radius: var(--m2-radius-md);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.875rem;
+}
+
+.m2-alert-error {
+  background: var(--m2-danger-subtle);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #b91c1c;
+}
+
+.m2-alert-success {
+  background: var(--m2-success-subtle);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #047857;
+}
+
+.m2-alert-info {
+  background: var(--m2-info-subtle);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  color: #0e7490;
+}
+
+/* ==========================================================================
+   Persona Switcher Component
+   ========================================================================== */
+.m2-persona-bar {
+  background: var(--m2-bg-elevated);
+  border: 1px solid var(--m2-border);
+  border-radius: var(--m2-radius-md);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.m2-persona-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.m2-persona-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--m2-radius-full);
+  background: var(--m2-primary-subtle);
+  color: var(--m2-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.m2-persona-select {
+  padding: 6px 12px;
+  border-radius: var(--m2-radius-sm);
+  border: 1px solid var(--m2-border);
+  background: var(--m2-bg-card);
+  color: var(--m2-text-main);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Booking Status Panel
+   ========================================================================== */
+.m2-filter-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--m2-border);
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.m2-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  border-radius: var(--m2-radius-sm);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--m2-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.m2-tab-btn.active {
+  background: var(--m2-primary-subtle);
+  color: var(--m2-primary);
+  font-weight: 600;
+}
+
+.m2-booking-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.m2-booking-item {
+  border: 1px solid var(--m2-border);
+  border-radius: var(--m2-radius-md);
+  padding: 16px;
+  background: var(--m2-bg-elevated);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.m2-booking-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--m2-shadow-md);
+  border-color: var(--m2-primary);
+}
+
+.m2-booking-item.selected {
+  border-color: var(--m2-primary);
+  box-shadow: 0 0 0 2px var(--m2-primary);
+}
+
+.m2-booking-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.m2-resource-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--m2-text-main);
+  margin: 0;
+}
+
+.m2-time-range {
+  font-size: 0.8125rem;
+  color: var(--m2-text-muted);
+  margin-bottom: 10px;
+}
+
+.m2-intent-text {
+  font-size: 0.875rem;
+  margin-bottom: 12px;
+  color: var(--m2-text-main);
+  line-height: 1.4;
+}
+
+.m2-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--m2-border);
+}
+
+/* Detail Drawer / Modal */
+.m2-detail-box {
+  background: var(--m2-bg-card);
+  border: 1px solid var(--m2-border);
+  border-radius: var(--m2-radius-md);
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.m2-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  position: relative;
+}
+
+.m2-timeline-item {
+  position: relative;
+  padding-left: 24px;
+  margin-bottom: 16px;
+  font-size: 0.8125rem;
+}
+
+.m2-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--m2-radius-full);
+  background: var(--m2-primary);
+}
+
+.m2-timeline-item::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 14px;
+  bottom: -10px;
+  width: 2px;
+  background: var(--m2-border);
+}
+
+.m2-timeline-item:last-child::after {
+  display: none;
+}
+
+/* ==========================================================================
+   Custody Panel Component
+   ========================================================================== */
+.m2-custody-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.m2-custody-modal {
+  background: var(--m2-bg-card);
+  border: 1px solid var(--m2-border);
+  border-radius: var(--m2-radius-lg);
+  box-shadow: var(--m2-shadow-lg);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.m2-credential-display {
+  background: var(--m2-bg-elevated);
+  border: 2px dashed var(--m2-primary);
+  border-radius: var(--m2-radius-md);
+  padding: 20px;
+  text-align: center;
+  margin: 16px 0;
+}
+
+.m2-otp-code {
+  font-family: var(--m2-font-mono);
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--m2-primary);
+  margin: 8px 0;
+}
+
+.m2-qr-text {
+  font-family: var(--m2-font-mono);
+  font-size: 0.75rem;
+  background: var(--m2-bg-card);
+  padding: 6px 10px;
+  border-radius: var(--m2-radius-sm);
+  word-break: break-all;
+  color: var(--m2-text-muted);
+}
+
+.m2-form-group {
+  margin-bottom: 16px;
+}
+
+.m2-form-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--m2-text-main);
+}
+
+.m2-form-input,
+.m2-form-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--m2-radius-sm);
+  border: 1px solid var(--m2-border);
+  background: var(--m2-bg-elevated);
+  color: var(--m2-text-main);
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+
+.m2-form-input:focus,
+.m2-form-textarea:focus {
+  outline: 2px solid var(--m2-primary);
+  border-color: transparent;
+}
+
+.m2-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  color: var(--m2-danger);
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   Notification Center Component
+   ========================================================================== */
+.m2-notif-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.m2-notif-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--m2-border);
+}
+
+.m2-notif-badge-count {
+  background: var(--m2-primary);
+  color: #fff;
+  border-radius: var(--m2-radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  margin-left: 8px;
+}
+
+.m2-notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.m2-notif-item {
+  border: 1px solid var(--m2-border);
+  border-radius: var(--m2-radius-md);
+  padding: 12px 16px;
+  background: var(--m2-bg-elevated);
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.m2-notif-item.unread {
+  background: var(--m2-primary-subtle);
+  border-color: var(--m2-primary);
+}
+
+.m2-notif-item:hover {
+  background: var(--m2-bg-card);
+}
+
+.m2-notif-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.m2-notif-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--m2-text-main);
+  margin: 0;
+}
+
+.m2-notif-time {
+  font-size: 0.75rem;
+  color: var(--m2-text-muted);
+  white-space: nowrap;
+}
+
+.m2-notif-message {
+  font-size: 0.8125rem;
+  color: var(--m2-text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.m2-empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--m2-text-muted);
+  font-size: 0.875rem;
+}

@@ -1,40 +1,65 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { bookingRoutes } from './routes/booking.routes.js';
+import { notificationRoutes } from './routes/notification.routes.js';
+import { errorHandler } from './utils/errors.js';
+import { StorageAdapter } from './adapters/storage.adapter.js';
+import { SchedulerService } from './services/scheduler.service.js';
+import { loadConfig } from './config/env.js';
 
 dotenv.config();
 
+const config = loadConfig();
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
-  credentials: true,
-}));
-app.use(express.json());
+// Security: Disable express fingerprinting header
+app.disable('x-powered-by');
 
-// Health check
-app.get('/health', (req: Request, res: Response) => {
+// Security Headers Middleware
+app.use((_req: Request, res: Response, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (config.isProduction) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
+// CORS: Strictly validate allowed origins in production
+const corsOrigin = config.isProduction
+  ? (config.allowedOrigins.length > 0 ? config.allowedOrigins : false)
+  : (config.allowedOrigins.length > 0 ? config.allowedOrigins : ['http://localhost:5173']);
+
+app.use(
+  cors({
+    origin: corsOrigin,
+    credentials: true,
+  })
+);
+
+// Payload limit: Restrict request payload size to prevent DoS via payload flooding
+app.use(express.json({ limit: '100kb' }));
+
+// Health check endpoint (safe for public monitoring without exposing credentials or internal state)
+app.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
+    module: 'OpenResource - Member 2 (Booking, Custody & Notifications)',
+    storageMode: StorageAdapter.getMode(),
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
   });
 });
 
-// Import routes
-import { resourceRoutes } from './routes/resource.routes.js';
-import { devRoutes } from './routes/dev.routes.js';
-import { errorHandler } from './utils/errors.js';
+// Member 2 Routes
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/notifications', notificationRoutes);
 
-// API routes
-app.use('/api/resources', resourceRoutes);
-
-// Development-only routes (protected by service layer checks)
-app.use('/api/dev', devRoutes);
-
-// 404 handler
+// 404 Catch-All
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     error: {
@@ -45,21 +70,41 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-// Error handler (must be last)
+// Error handling middleware (must be registered last)
 app.use(errorHandler);
 
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`🚀 OpenResource API Server`);
-    console.log(`📍 Running on http://localhost:${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+// Clean connection and background process shutdown
+let serverInstance: any = null;
 
-    const devEnabled = process.env.ALLOW_DEV_ENDPOINTS === 'true';
-    if (devEnabled) {
-      console.log(`🔧 Dev endpoints enabled at /api/dev/*`);
-    } else {
-      console.log(`🔒 Dev endpoints disabled (set ALLOW_DEV_ENDPOINTS=true to enable)`);
+const shutdown = async () => {
+  try {
+    SchedulerService.getInstance().stop();
+    await StorageAdapter.close();
+    if (serverInstance) {
+      serverInstance.close();
     }
+  } catch (err) {
+    console.error('Error closing storage adapter:', err);
+  }
+};
+
+process.on('SIGTERM', async () => {
+  await shutdown();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  await shutdown();
+  process.exit(0);
+});
+
+// Standalone server launch
+if (process.env.NODE_ENV !== 'test' && !process.env.VITE_DEV_SERVER) {
+  const mode = StorageAdapter.getMode();
+  serverInstance = app.listen(config.port, () => {
+    console.log(`OpenResource Member 2 API Server running at http://localhost:${config.port}`);
+    console.log(`Environment: [${config.env.toUpperCase()}] | Storage Mode: [${mode.toUpperCase()}]`);
+    console.log(`Mounted routes: /api/bookings/* and /api/notifications/*`);
   });
 }
 
