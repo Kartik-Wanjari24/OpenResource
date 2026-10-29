@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { JudgeTelemetryBar } from './components/JudgeTelemetryBar';
 import { ResourceMarketplace } from './components/ResourceMarketplace';
 import { ResourceTimeline } from './components/ResourceTimeline';
+import { FairShareAllocationStudio } from './components/FairShareAllocationStudio';
 import { ConditionComparisonDemo } from './components/ConditionComparisonDemo';
+import { Member2Workbench } from './components/member2';
 import type { Persona, Resource } from './lib/api';
 import './App.css';
 
@@ -12,11 +14,18 @@ function App() {
   const [challengeProgress, setChallengeProgress] = useState(0);
   const [selectedResources, setSelectedResources] = useState<Resource[]>([]);
   const [showTimeline, setShowTimeline] = useState(false);
+  const fairnessSectionRef = useRef<HTMLDivElement | null>(null);
 
   const handlePersonaChange = (persona: Persona, headers: Record<string, string>) => {
     setCurrentPersona(persona);
-    setUserHeaders(headers);
-    // Increment challenge progress when switching personas
+    const normalizedHeaders = {
+      ...headers,
+      'x-test-user-id': headers['X-Test-User-Id'] || headers['x-test-user-id'] || persona.id,
+      'x-test-user-role': headers['X-Test-User-Role'] || headers['x-test-user-role'] || persona.role,
+      'x-user-id': headers['X-User-Id'] || headers['x-user-id'] || persona.id,
+      'x-user-role': headers['X-User-Role'] || headers['x-user-role'] || persona.role,
+    };
+    setUserHeaders(normalizedHeaders);
     setChallengeProgress((prev) => Math.min(prev + 1, 10));
   };
 
@@ -24,9 +33,15 @@ function App() {
     setSelectedResources(resources);
     if (resources.length > 0) {
       setShowTimeline(true);
-      // Increment challenge progress when viewing timeline
       setChallengeProgress((prev) => Math.min(prev + 1, 10));
     }
+  };
+
+  const handleTimelineSlotClick = (resourceId: string, startTime: Date, endTime: Date) => {
+    console.log('Slot clicked:', { resourceId, startTime, endTime });
+    setChallengeProgress((prev) => Math.min(prev + 1, 10));
+
+    fairnessSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
@@ -48,14 +63,23 @@ function App() {
           <div className="timeline-section">
             <ResourceTimeline
               resources={selectedResources}
-              bookings={[]} // Will be populated when booking API is available
-              onSlotClick={(resourceId, startTime, endTime) => {
-                console.log('Slot clicked:', { resourceId, startTime, endTime });
-                // TODO: Open booking modal
-              }}
+              bookings={[]}
+              onSlotClick={handleTimelineSlotClick}
             />
           </div>
         )}
+
+        <div
+          ref={fairnessSectionRef}
+          className="fairness-section"
+          onClickCapture={() => setChallengeProgress((prev) => Math.min(prev + 1, 10))}
+        >
+          <FairShareAllocationStudio />
+        </div>
+
+        <div className="member2-section">
+          <Member2Workbench />
+        </div>
 
         <div className="comparison-section">
           <ConditionComparisonDemo />

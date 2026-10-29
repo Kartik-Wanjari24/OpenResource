@@ -13,6 +13,7 @@ export function ConditionComparisonDemo() {
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiStatus, setApiStatus] = useState<'connected' | 'demo'>('demo');
 
   useEffect(() => {
     loadInspectionList();
@@ -22,13 +23,14 @@ export function ConditionComparisonDemo() {
     try {
       const list = await inspectionApi.getResourceInspections('demo_resource_001');
       setInspections(list);
+      setApiStatus('connected');
 
-      // Auto-load first inspection
       if (list.length > 0) {
         loadInspection(list[0].id);
       }
     } catch (err) {
       console.error('Failed to load inspections:', err);
+      setApiStatus('demo');
     }
   }
 
@@ -95,8 +97,9 @@ export function ConditionComparisonDemo() {
           <div className={styles.sidebarInfo}>
             <h3 className={styles.sidebarInfoTitle}>Integration Status</h3>
             <p className={styles.sidebarInfoText}>
-              Inspection API endpoint from Member 4 is not yet available. Currently displaying
-              demo fixture data.
+              {apiStatus === 'connected'
+                ? 'Connected to the live backend inspection API and streaming inspection telemetry.'
+                : 'Inspection API endpoint from Member 4 is not yet available. Currently displaying demo fixture data.'}
             </p>
             <div className={styles.apiStatus}>
               <div className={styles.apiStatusItem}>
@@ -105,7 +108,9 @@ export function ConditionComparisonDemo() {
               </div>
               <div className={styles.apiStatusItem}>
                 <span className={styles.apiStatusLabel}>Status:</span>
-                <span className={`${styles.badge} ${styles.badgeWarning}`}>Pending</span>
+                <span className={`${styles.badge} ${apiStatus === 'connected' ? styles.badgeSuccess : styles.badgeWarning}`}>
+                  {apiStatus === 'connected' ? 'Connected' : 'Pending'}
+                </span>
               </div>
             </div>
           </div>

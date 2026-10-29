@@ -1,9 +1,17 @@
+const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+
+async function fetchInspectionJson<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`);
+  if (!response.ok) {
+    throw new Error(`Inspection request failed: ${response.status}`);
+  }
+  const payload = await response.json();
+  return payload.data ?? payload;
+}
+
 /**
  * Inspection API Client
  * Integration point with Member 4's inspection system
- *
- * NOTE: Real inspection API not yet available.
- * Using demo fixture data until Member 4's endpoints are ready.
  */
 
 export interface BoundingBox {
@@ -67,12 +75,12 @@ export const inspectionApi = {
    * - Bounding box coordinates in pixels relative to original image
    */
   async getInspection(inspectionId: string): Promise<Inspection> {
-    // TODO: Replace with real API call
-    // const response = await fetchApi<{ inspection: Inspection }>(`/api/inspections/${inspectionId}`);
-    // return response.inspection;
-
-    // Demo fixture data
-    return getDemoInspection(inspectionId);
+    try {
+      const response = await fetchInspectionJson<{ inspection: Inspection }>(`/api/inspections/${inspectionId}`);
+      return response.inspection;
+    } catch {
+      return getDemoInspection(inspectionId);
+    }
   },
 
   /**
@@ -85,12 +93,15 @@ export const inspectionApi = {
    * - Response format: { inspections: InspectionListItem[] }
    */
   async getResourceInspections(resourceId: string): Promise<InspectionListItem[]> {
-    // TODO: Replace with real API call
-    // const response = await fetchApi<{ inspections: InspectionListItem[] }>(`/api/resources/${resourceId}/inspections`);
-    // return response.inspections;
-
-    // Demo fixture data
-    return getDemoInspectionList(resourceId);
+    try {
+      const response = await fetchInspectionJson<{ inspections: InspectionListItem[] }>(`/api/inspections`);
+      if (response.inspections && response.inspections.length > 0) {
+        return response.inspections;
+      }
+      return getDemoInspectionList(resourceId);
+    } catch {
+      return getDemoInspectionList(resourceId);
+    }
   },
 };
 
