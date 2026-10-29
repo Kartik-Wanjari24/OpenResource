@@ -5,6 +5,8 @@ import { PersonaSwitcher } from './PersonaSwitcher.tsx';
 import { BookingStatusPanel } from './BookingStatusPanel.tsx';
 import { CustodyPanel } from './CustodyPanel.tsx';
 import { NotificationCenter } from './NotificationCenter.tsx';
+import { IncidentReviewConsole } from './IncidentReviewConsole.tsx';
+import { AuditExplorer } from './AuditExplorer.tsx';
 import './member2.css';
 
 interface Member2WorkbenchProps {
@@ -18,6 +20,8 @@ export const Member2Workbench: React.FC<Member2WorkbenchProps> = ({
   const [activeCustodyBooking, setActiveCustodyBooking] = useState<Booking | null>(null);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [showIncidentConsole, setShowIncidentConsole] = useState(false);
+  const [showAuditExplorer, setShowAuditExplorer] = useState(false);
 
   // Quick booking modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -106,6 +110,24 @@ export const Member2Workbench: React.FC<Member2WorkbenchProps> = ({
           >
             ➕ New Booking Request
           </button>
+          {['LAB_OWNER', 'ADMIN', 'AUDITOR'].includes(currentPersona.role) && (
+            <button
+              type="button"
+              className="m2-btn m2-btn-secondary"
+              onClick={() => setShowIncidentConsole(true)}
+              id="btn-open-incident-console"
+            >
+              ⚠️ Incident Review
+            </button>
+          )}
+          <button
+            type="button"
+            className="m2-btn m2-btn-secondary"
+            onClick={() => setShowAuditExplorer(true)}
+            id="btn-open-audit-explorer"
+          >
+            🔐 Audit Explorer
+          </button>
         </div>
       </div>
 
@@ -148,6 +170,22 @@ export const Member2Workbench: React.FC<Member2WorkbenchProps> = ({
             setActiveCustodyBooking(updated);
             setRefreshTick((t) => t + 1);
           }}
+        />
+      )}
+
+      {/* Incident Review Console Modal */}
+      {showIncidentConsole && (
+        <IncidentReviewConsole
+          currentPersona={currentPersona}
+          onClose={() => setShowIncidentConsole(false)}
+        />
+      )}
+
+      {/* Audit Explorer Modal */}
+      {showAuditExplorer && (
+        <AuditExplorer
+          currentPersona={currentPersona}
+          onClose={() => setShowAuditExplorer(false)}
         />
       )}
 

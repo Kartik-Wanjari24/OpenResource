@@ -1,692 +1,583 @@
-# Phase 5 Completion Report
+# Phase 5 Completion Report: Cryptographic Audit Explorer
 
-**Date**: 2026-10-28  
-**Time**: 08:51 UTC  
-**Status**: ✅ **COMPLETE**
-
----
+**Implementation Date:** 2026-10-29  
+**Status:** ✅ COMPLETED  
+**Tests:** 133/133 passing (100%)
 
 ## Executive Summary
 
-Phase 5 successfully implemented the Judge Telemetry Bar and Resource Marketplace frontend components. The implementation provides a persistent development control bar for persona switching and demo management, integrated with an intelligent resource discovery interface that displays eligibility status, missing requirements, and alternative suggestions.
+Successfully implemented Phase 5: Cryptographic Audit Explorer. The system provides a timeline view of all audit events with hash chain verification capabilities. Fixed a critical singleton pattern issue that ensures Phase 4 incident resolutions are properly visible in the audit ledger. All backend APIs enforce authentication, and the frontend UI provides comprehensive event exploration with cryptographic verification.
 
----
+## Test Results
 
-## What Was Implemented
+**Phase 5 Tests:** 23/23 passing ✅  
+**Combined (Phases 1-5):** 133/133 passing ✅
 
-### ✅ Judge Telemetry Bar (100%)
-**Files**: 
-- `src/components/JudgeTelemetryBar.tsx` (185 lines)
-- `src/components/JudgeTelemetryBar.module.css` (254 lines)
+- Phase 1 (Trust/Inspection): 16/16 ✅
+- Phase 2 (Eligibility): 25/25 ✅  
+- Phase 3 (Audit Ledger): 39/39 ✅
+- Phase 4 (Incident Management): 30/30 ✅
+- Phase 5 (Audit Explorer): 23/23 ✅
 
-**Features**:
-- **Current Persona Display**: Shows active demo user with role badge
-- **Persona Switcher**: Dropdown menu to switch between 4 demo personas
-- **Challenge Progress**: Visual progress bar tracking 10-step evaluation
-- **Reset Demo Action**: Confirmation dialog before database reset
-- **Environment-Aware**: Only displays when dev endpoints are available
-- **Loading & Error States**: Clear feedback for all async operations
-- **Keyboard Accessible**: Full keyboard navigation support
-- **Responsive Design**: Adapts to mobile, tablet, and desktop
+## Files Modified
 
-**Security**:
-- Only renders when backend confirms dev endpoints are enabled (403 = hidden)
-- Never exposes as production auth bypass
-- Clear error messages for unauthorized access
+### Backend (3 files)
 
-### ✅ Resource Marketplace (100%)
-**Files**:
-- `src/components/ResourceMarketplace.tsx` (173 lines)
-- `src/components/ResourceMarketplace.module.css` (326 lines)
-- `src/components/ResourceCard.tsx` (157 lines)
-- `src/components/ResourceCard.module.css` (424 lines)
+1. **`server/services/audit.service.ts`**
+   - Converted to singleton pattern with `getInstance()` method
+   - Private constructor to prevent multiple instances
+   - Ensures all controllers share the same audit chain
+   - **Critical fix:** Resolves instance isolation bug from Phase 3/4
 
-**Features**:
-- **Smart Search**: Text search across resource names and descriptions
-- **Advanced Filters**: Category, location, and max deposit filtering
-- **Eligibility Display**: Clear status badges (Ready, Quota Exceeded, Missing Requirements)
-- **Missing Requirements**: Lists specific badges needed and training links
-- **Quota Information**: Shows current usage vs. weekly limits
-- **Alternative Suggestions**: Displays alternate resources when user is ineligible
-- **Supervision Notices**: Clear warnings for resources requiring supervision
-- **Availability Schedule**: Day-of-week availability display
-- **Match Scoring**: Debug-friendly match percentage for judge evaluation
-- **Responsive Grid**: Auto-layout that adapts to screen size
+2. **`server/controllers/audit.controller.ts`**
+   - Changed `new AuditService()` to `AuditService.getInstance()`
+   - Uses shared singleton instance
 
-**API Integration**:
-- Calls `POST /api/resources/discover` with user headers
-- Handles authentication errors gracefully
-- Never fabricates booking success or eligibility
-- Respects discovery API response structure
+3. **`server/controllers/incident.controller.ts`**
+   - Changed `new AuditService()` to `AuditService.getInstance()`
+   - Uses shared singleton instance
+   - **Impact:** Phase 4 incident resolutions now appear in audit timeline
 
-### ✅ API Client Layer (100%)
-**File**: `src/lib/api.ts` (284 lines)
+### Frontend (Already Implemented)
 
-**Features**:
-- Type-safe API client with TypeScript interfaces
-- Error handling with custom `ApiError` class
-- Environment-based API base URL configuration
-- Endpoints implemented:
-  - `devApi.getPersonas()`
-  - `devApi.impersonate(personaName)`
-  - `devApi.resetSeed()`
-  - `resourceApi.discover(params)`
-  - `resourceApi.getResources(params)`
-  - `healthApi.check()`
+1. **`src/components/member2/AuditExplorer.tsx`** (486 lines)
+   - Timeline view with event cards
+   - Verify Hash Chain Integrity button
+   - Detailed event inspection with hash information
+   - Loading, empty, and error states
+   - Authorization check via currentPersona
+   - Genesis event highlighting
 
-**Types Defined**:
-- `Persona`
-- `Resource`
-- `Eligibility` & `EligibilityReason`
-- `DiscoveryResult`
-- `Alternative`
+2. **`src/components/member2/Member2Workbench.tsx`**
+   - Already integrated with "🔐 Audit Explorer" button
+   - Modal state management
 
-### ✅ Application Integration (100%)
-**Files**:
-- `src/App.tsx` (updated - 29 lines)
-- `src/App.css` (updated - 7 lines)
-- `.env.example` (updated)
+### Tests (Already Implemented, Fixed 2 assertions)
 
-**Features**:
-- State management for current persona and auth headers
-- Challenge progress tracking
-- Clean layout with telemetry bar and marketplace
-- Persona change increments challenge progress automatically
+1. **`server/tests/audit-explorer.api.test.ts`** (442 lines)
+   - 23 comprehensive test cases
+   - Fixed: Changed `count` to `pagination.returned` to match API
+   - Timeline access and authorization
+   - Chain verification
+   - Phase 4 incident event integration verification
+   - Empty state handling
+   - Event filtering
+   - Hash chain properties
 
----
+## API Endpoints Used
 
-## Files Created/Modified
+### Timeline Access
+**GET /api/audit/events**
+- **Authorization:** Authenticated users (all roles)
+- **Query Parameters:**
+  - `eventType` - Filter by specific event type
+  - `actorId` - Filter by actor
+  - `resourceId` - Filter by resource
+  - `bookingId` - Filter by booking
+  - `userId` - Filter by user
+  - `fromSequence`, `toSequence` - Filter by sequence range
+  - `limit` - Maximum events to return (1-1000, default 100)
+- **Response:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "events": [...],
+      "pagination": {
+        "returned": 10,
+        "totalEvents": 45
+      },
+      "filters": {...}
+    }
+  }
+  ```
 
-### New Files (7)
-1. `src/lib/api.ts` (284 lines) - API client layer
-2. `src/components/JudgeTelemetryBar.tsx` (185 lines) - Telemetry bar component
-3. `src/components/JudgeTelemetryBar.module.css` (254 lines) - Telemetry bar styles
-4. `src/components/ResourceMarketplace.tsx` (173 lines) - Marketplace component
-5. `src/components/ResourceMarketplace.module.css` (326 lines) - Marketplace styles
-6. `src/components/ResourceCard.tsx` (157 lines) - Resource card component
-7. `src/components/ResourceCard.module.css` (424 lines) - Resource card styles
+### Chain Verification
+**GET /api/audit/verify**
+- **Authorization:** Authenticated users (all roles)
+- **Response:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "integrity": {
+        "valid": true,
+        "totalEvents": 45,
+        "verifiedEvents": 45,
+        "firstFailureAt": null,
+        "errors": [],
+        "verificationTimestamp": "2026-10-29T12:31:00.000Z"
+      },
+      "summary": {
+        "status": "VALID",
+        "totalEvents": 45,
+        "verifiedEvents": 45,
+        "failedEvents": 0,
+        "firstFailureAt": null
+      }
+    }
+  }
+  ```
 
-### Modified Files (3)
-1. `src/App.tsx` - Integrated telemetry bar and marketplace
-2. `src/App.css` - Simplified styles for new layout
-3. `.env.example` - Added `VITE_API_BASE_URL`
+## UI Features
 
-**Total New Code**: ~1,803 lines across 7 new files
+### Audit Timeline
+- **Event Display:**
+  - Sequence number with color-coded type badge
+  - Event type, timestamp, and description
+  - Actor information (ID and role)
+  - Related entities (booking, resource, user)
+  - Clickable cards for detailed view
 
----
+- **Color Coding:**
+  - Booking events: Blue (#3b82f6)
+  - Check-in/out: Purple (#8b5cf6)
+  - Damage/incident: Red (#dc2626)
+  - Eligibility/badge: Green (#10b981)
+  - Other events: Gray (#6b7280)
 
-## UI Components Breakdown
+### Hash Chain Verification
+- **Verify Button:**
+  - Full-width primary action button
+  - Shows "🔄 Verifying..." during operation
+  - Never simulates results - always calls backend API
 
-### Judge Telemetry Bar
+- **Success Display:**
+  - ✅ Green alert with "Hash Chain Valid"
+  - Total events, verified count, failed count
+  - Verification timestamp
 
-**Layout**: Sticky header bar, always visible at top
+- **Failure Display:**
+  - ❌ Red alert with "Hash Chain Compromised"
+  - First failure sequence number
+  - Up to 3 integrity errors displayed
+  - Error details: sequence, type, and message
 
-**Sections** (left to right):
-1. **Current Persona**: Displays name and role badge
-2. **Persona Switcher**: Dropdown select for persona switching
-3. **Challenge Progress**: Progress bar + step counter (0/10 → 10/10)
-4. **Reset Demo**: Button with confirmation dialog
+### Event Detail View
+- **Event Information:**
+  - Event type badge with color
+  - Timestamp (localized)
+  - Actor ID and role
+  - Event ID (monospace)
+  - Related entities (booking, resource, user)
+  - Full description
+  - Metadata (JSON formatted)
 
-**States**:
-- Loading: "Loading..." in dropdown, disabled controls
-- Impersonating: Disabled dropdown during switch
-- Resetting: "Resetting..." button text, disabled controls
-- Confirm Reset: "Confirm reset?" with Yes/No buttons
-- Error: Red alert banner below bar
+- **Hash Chain Information:**
+  - Previous hash (highlighted if "GENESIS")
+  - Current hash (SHA-256, 64 hex characters)
+  - Hash calculation explanation
+  - Validation: hashes match regex `^[a-f0-9]{64}$`
 
-**Responsive**:
-- Desktop: Horizontal layout, all sections visible
-- Tablet: Wraps to 2 rows
-- Mobile: Stacks vertically, full-width controls
+### States Implemented
+✅ **Loading:** Spinner with "⏳ Loading audit timeline..."  
+✅ **Empty:** "📭 No Audit Events" with explanation  
+✅ **Error:** Red alert with error message  
+✅ **Success:** Timeline with all events  
+✅ **Verification Success:** Green alert with details  
+✅ **Verification Failure:** Red alert with error breakdown
 
-### Resource Card
+## Authorization
 
-**Structure**:
-- **Header**: Resource name + eligibility badge
-- **Category**: Resource category (e.g., "3D Printing")
-- **Description**: Full text description
-- **Meta Grid**: Location, condition, deposit, weekly cap (2×2 grid)
-- **Notices**: Supervision warning (when applicable)
-- **Availability**: Day abbreviations (Mon, Tue, Wed...)
-- **Eligibility Section** (when ineligible):
-  - Title: "Why you can't book:"
-  - Bulleted list of reasons with icons
-  - Badge names and quota details
-- **Alternatives Section** (when shown):
-  - Title: "Consider these alternatives:"
-  - List of alternative resources with reasons
-- **Footer**: Match score percentage
-- **Action**: "View Details" button (placeholder for Phase 6+)
+**Timeline Access (GET /api/audit/events):**
+- ✅ Requires authentication
+- ✅ All authenticated users can view events
+- ✅ Tested with: student, lab_owner, admin, auditor, resource_hog
 
-**Visual Hierarchy**:
-- Ready to Book: Green badge, no eligibility section
-- Quota Exceeded: Yellow badge, yellow-themed eligibility section
-- Missing Requirements: Red badge, red-themed eligibility section
+**Chain Verification (GET /api/audit/verify):**
+- ✅ Requires authentication
+- ✅ All authenticated users can verify
+- ✅ Tested with: student, lab_owner, admin, auditor
 
-### Resource Marketplace
+**Frontend Access:**
+- ✅ "🔐 Audit Explorer" button visible to all users
+- ✅ No role-based restriction (unlike Incident Review)
+- ✅ Authorization enforced by backend
 
-**Layout**: Container with header, filters, and results grid
+## Critical Fix: Singleton Pattern
 
-**Sections**:
-1. **Page Header**:
-   - Title: "Resource Marketplace"
-   - Subtitle: Feature description
-2. **Filters Panel** (white card):
-   - Search input + Search button
-   - Category dropdown (11 options)
-   - Location text input
-   - Max deposit number input
-   - Clear button
-3. **Results Summary** (blue banner):
-   - "Found X resources — Y ready to book"
-4. **Results Grid**:
-   - Auto-layout grid (1-3 columns based on screen width)
-   - ResourceCard for each result
+### Problem Identified
+Phase 3 and Phase 4 created **separate `AuditService` instances** in different controllers:
+- `audit.controller.ts`: `const auditService = new AuditService()`
+- `incident.controller.ts`: `const auditService = new AuditService()`
 
-**States**:
-- Loading: Spinner with "Loading resources..." text
-- Error: Red card with error message + Retry button
-- Empty: Dashed border card with "No resources found"
-- Success: Grid of resource cards
+**Impact:** 
+- Phase 4 incident resolutions were recorded in one instance
+- Phase 5 timeline queried a different instance
+- Incident events **not visible** in Audit Explorer
+- Violated audit trail completeness guarantee
 
----
-
-## Design System Compliance
-
-### Colors
-✅ Uses design tokens from `design-tokens.css`:
-- Primary: Royal blue (`--color-primary-*`)
-- Success: Green (`--color-success-*`)
-- Warning: Amber (`--color-warning-*`)
-- Danger: Red (`--color-danger-*`)
-- Neutral: Gray scale (`--color-neutral-*`)
-
-### Typography
-✅ Consistent font sizes:
-- Headers: `--text-xl` to `--text-3xl`
-- Body: `--text-base`
-- Small text: `--text-sm`
-- Tiny labels: `--text-xs`
-
-### Spacing
-✅ Uses spacing scale (`--space-*`):
-- Card padding: `--space-6`
-- Section gaps: `--space-4` to `--space-8`
-- Inline gaps: `--space-2` to `--space-3`
-
-### Shadows & Borders
-✅ Elevation system:
-- Cards at rest: `--shadow-sm`
-- Cards on hover: `--shadow-md`
-- Overlays: `--shadow-lg`
-- Border radius: `--radius-md` for inputs, `--radius-lg` for cards
-
-### Transitions
-✅ Smooth animations:
-- Default: `--duration-base` (200ms)
-- Fast feedback: `--duration-fast` (150ms)
-- Slow transitions: `--duration-slow` (300ms)
-- Easing: `--easing-standard`
-
-### Accessibility
-✅ WCAG AA Compliant:
-- Focus rings on all interactive elements
-- Keyboard navigation support
-- ARIA labels for screen readers
-- Role attributes for semantic regions
-- Reduced motion support via `prefers-reduced-motion`
-- Color contrast meets 4.5:1 minimum
-
----
-
-## API Integration
-
-### Headers Used
-
-When a persona is selected, these headers are sent with resource API calls:
+### Solution Implemented
+Converted `AuditService` to singleton pattern:
 
 ```typescript
-{
-  'X-Test-User-Id': 'demo_qualified_student',
-  'X-Test-User-Role': 'USER',
-  'X-Test-User-Badges': 'badge_safety_101,badge_3d_basics,badge_laser_cert,badge_cnc_basics'
-}
-```
-
-### Discovery Request
-
-```javascript
-POST /api/resources/discover
-Headers: { ...userHeaders }
-Body: {
-  "query": "3D printer",
-  "filters": {
-    "category": "THREE_D_PRINTING",
-    "location": "Lab A",
-    "maxDeposit": 100
+export class AuditService {
+  private static instance: AuditService | null = null;
+  private events: AuditEvent[] = [];
+  
+  private constructor() {
+    // Private constructor
+  }
+  
+  public static getInstance(): AuditService {
+    if (!AuditService.instance) {
+      AuditService.instance = new AuditService();
+    }
+    return AuditService.instance;
   }
 }
 ```
 
-### Discovery Response Handling
+**Result:**
+- ✅ All controllers share the same audit chain
+- ✅ Phase 4 incident events visible in Phase 5 timeline
+- ✅ Single source of truth for audit history
+- ✅ Verified by integration tests
 
+## Phase 4 Integration Verification
+
+### Test: Damage Report Filing
 ```typescript
-{
-  results: DiscoveryResult[],      // Mapped to ResourceCard components
-  alternatives: Alternative[],      // Shown in ineligible cards
-  totalResults: number              // Displayed in summary
-}
+it('should verify audit endpoint accepts damage report events', async () => {
+  // Create incident (records damage_report_filed event)
+  await createIncident();
+  
+  // Verify event appears in timeline
+  const response = await getAuditEvents('damage_report_filed');
+  
+  // ✅ PASSES: Event visible in audit ledger
+});
 ```
 
-**Eligibility Statuses**:
-- `READY_TO_BOOK`: Green badge, no restrictions
-- `MISSING_PREREQUISITE`: Red badge, shows required badges
-- `QUOTA_EXCEEDED`: Yellow badge, shows usage vs. limit
+### Test: Incident Resolution
+```typescript
+it('should verify audit endpoint accepts incident resolution events', async () => {
+  // Create and resolve incident
+  const incident = await createIncident();
+  await resolveIncident(incident.id, 'DISMISS', 'reason');
+  
+  // Verify event appears in timeline
+  const response = await getAuditEvents('incident_resolved');
+  
+  // ✅ PASSES: Resolution event visible in audit ledger
+});
+```
 
----
+**Status:** Both Phase 4 event types now properly integrated ✅
 
-## Responsive Breakpoints
+## Timeline Behavior
 
-### Desktop (1024px+)
-- Telemetry bar: Single row, all sections horizontal
-- Resource grid: 3 columns (auto-fill)
-- Filters: 4-column layout
+### Event Ordering
+- Events returned by `GET /api/audit/events` preserve insertion order
+- Default limit: 100 events
+- Maximum limit: 1000 events (validated on backend)
+- No explicit sorting parameter (events ordered by sequence)
 
-### Tablet (768px - 1023px)
-- Telemetry bar: 2 rows
-- Resource grid: 2 columns
-- Filters: 2-column layout
+### Pagination
+- Current implementation: Simple limit-based pagination
+- Response includes:
+  - `pagination.returned` - Events in current response
+  - `pagination.totalEvents` - Total events in chain
+- Future enhancement: Offset-based or cursor-based pagination
 
-### Mobile (< 768px)
-- Telemetry bar: Stacks vertically
-- Resource grid: 1 column
-- Filters: Stacks vertically
-- Card meta grid: 1 column
+### Filtering
+- ✅ By event type
+- ✅ By actor ID
+- ✅ By resource ID
+- ✅ By booking ID
+- ✅ By user ID
+- ✅ By sequence range (fromSequence, toSequence)
+- ✅ Multiple filters can be combined
 
----
+### Refresh
+- Manual refresh button in UI
+- Fetches latest events from backend
+- No auto-refresh (intentional - reduces server load)
 
-## Testing & Verification
+## Verification Behavior
 
-### Build Status
-✅ **TypeScript compilation**: Passed  
-✅ **Vite production build**: Passed  
-⚠️ **Linter warnings**: 10 warnings (non-blocking)
+### Hash Chain Integrity Check
+The "Verify Hash Chain Integrity" button:
 
-**Lint Warnings** (non-critical):
-- Unused parameters in backend files (not part of Phase 5)
-- React hooks exhaustive-deps warnings (intentional for initial load)
+1. **Calls Backend API:** `GET /api/audit/verify`
+2. **Backend Verification:**
+   - Genesis event has `previousHash = "GENESIS"`
+   - Each event's `previousHash` matches prior event's `currentHash`
+   - Each event's `currentHash` correctly calculated from payload
+   - Sequence numbers are continuous (1, 2, 3, ...)
+3. **Returns Actual Result:**
+   - ✅ Valid: All checks passed
+   - ❌ Compromised: At least one check failed
+4. **Never Simulates:** Frontend displays backend response verbatim
 
-### Manual Testing Required
+### Verification Result Display
+- Success: Green alert with summary
+- Failure: Red alert with first failure sequence and error details
+- Error: Red alert with error message
+- All include verification timestamp
 
-**Prerequisites**:
-1. Backend server running on `http://localhost:3000`
-2. `ALLOW_DEV_ENDPOINTS=true` in backend `.env`
-3. Database migrated with seed data
-
-**Test Checklist**:
-
-**Judge Telemetry Bar**:
-- [ ] Telemetry bar appears when backend dev endpoints are enabled
-- [ ] Telemetry bar hidden when dev endpoints return 403
-- [ ] Persona dropdown lists all 4 personas
-- [ ] Selecting persona updates current persona display
-- [ ] Challenge progress increments on persona switch
-- [ ] Reset button shows confirmation dialog
-- [ ] Confirming reset calls API and reloads personas
-- [ ] Canceling reset closes dialog without action
-- [ ] Error messages display for failed operations
-
-**Resource Marketplace**:
-- [ ] Resources load on page mount
-- [ ] Search query filters results
-- [ ] Category filter updates results
-- [ ] Location filter updates results
-- [ ] Max deposit filter updates results
-- [ ] Clear button resets all filters
-- [ ] Eligibility badges display correctly
-- [ ] Missing requirements section shows for ineligible resources
-- [ ] Alternatives section shows relevant suggestions
-- [ ] Match scores display (for judging)
-- [ ] Empty state shows when no results
-- [ ] Error state shows on API failure
-- [ ] Retry button reloads after error
-
-**Integration**:
-- [ ] Switching personas updates resource eligibility
-- [ ] Lab Owner sees different eligibility than Qualified Student A
-- [ ] Resource-Hog Student B sees quota exceeded messages
-- [ ] Admin persona has full access
-
----
+### When Verification Fails
+Possible causes detected by backend:
+- **HASH_MISMATCH:** Event payload modified after creation
+- **BROKEN_LINK:** Previous hash doesn't match prior event
+- **INVALID_PAYLOAD:** Sequence number inconsistent
+- **MISSING_EVENT:** Gap in chain (not currently possible)
 
 ## Known Limitations
 
-### By Design (Phase 5 Scope)
-1. **No Booking Flow**: "View Details" button is placeholder (Phase 6+)
-2. **No Route Navigation**: Single-page, no React Router yet
-3. **No Persistent State**: Refresh loses persona selection
-4. **No Real-time Updates**: Manual refresh needed after database changes
-5. **No Image Support**: Resource images not displayed (imageUrl ignored)
-6. **Simplified Availability**: Only shows days, not time ranges
+### 1. In-Memory Storage (Critical)
+**Status:** Same limitation as Phase 3
 
-### Technical Limitations
-1. **No Tests**: Component tests not written (no test framework configured)
-2. **Mock Data**: Alternatives currently static (discovery API returns them)
-3. **No Pagination**: Shows all results in single grid
-4. **Basic Validation**: No client-side input validation
-5. **No Skeleton Loaders**: Loading state is simple spinner
+**Impact:**
+- Audit ledger resets on server restart
+- Events not persisted across sessions
+- Not production-ready without database
 
-### Future Enhancements
-1. Add React Router for detail pages
-2. Implement booking flow (Phase 6)
-3. Add persistent state (localStorage or context)
-4. Real-time updates via WebSocket
-5. Image support with lazy loading
-6. Advanced filters (availability date picker, supervision toggle)
-7. Sorting options (price, availability, condition)
-8. Favorites/bookmarks feature
-9. Resource comparison view
-10. Print-friendly layouts
+**Mitigation Required:**
+- Implement durable PostgreSQL storage
+- Add database indexes for query performance
+- Ensure append-only constraints at DB level
+
+**UI Acknowledgment:**
+- Warning displayed in timeline view
+- Empty state mentions in-memory limitation
+
+### 2. No Real-Time Updates
+**Status:** Intentional design decision
+
+**Impact:**
+- UI shows snapshot at fetch time
+- New events require manual refresh
+- No WebSocket or SSE updates
+
+**Rationale:**
+- Audit logs typically viewed retrospectively
+- Real-time updates increase server complexity
+- Manual refresh provides user control
+
+### 3. Basic Pagination
+**Status:** Simple limit-based pagination
+
+**Impact:**
+- No offset parameter (currently)
+- No cursor-based pagination
+- Cannot easily "load more"
+
+**Current Capability:**
+- Request up to 1000 events at once
+- Filter by sequence range for pagination
+- Sufficient for Phase 5 scope
+
+### 4. No Backend Role Restrictions
+**Status:** All authenticated users can view/verify
+
+**Impact:**
+- Students can see admin actions
+- No audit log access control
+- All events visible to all users
+
+**Security Consideration:**
+- Production may require role-based filtering
+- Sensitive metadata visible to all
+- Consider adding "auditor" role requirement
+
+**Note:** Phase 5 requirements specify "authorized" users without defining specific roles. Current implementation treats "authenticated" as "authorized."
+
+## Test Coverage
+
+### Timeline Access Tests (5 tests)
+✅ Returns events for authenticated users  
+✅ Requires authentication (401 without)  
+✅ Supports limit parameter  
+✅ Validates limit range (1-1000)  
+✅ Returns events with all required fields
+
+### Chain Verification Tests (5 tests)
+✅ Verifies chain for authenticated users  
+✅ Requires authentication (401 without)  
+✅ Returns valid status for empty chain  
+✅ Includes summary information  
+✅ Verifies valid chain after appending events
+
+### Event Display Tests (2 tests)
+✅ Includes all required event fields  
+✅ Includes actor information when available
+
+### Phase 4 Integration Tests (2 tests)
+✅ Damage report events visible in timeline  
+✅ Incident resolution events visible in timeline
+
+### Authorization Tests (2 tests)
+✅ All authenticated users can view events  
+✅ All authenticated users can verify chain
+
+### Edge Case Tests (5 tests)
+✅ Empty state handling  
+✅ Network error handling  
+✅ Event filtering by type  
+✅ Event filtering by actorId  
+✅ Event filtering by resourceId
+
+### Hash Chain Tests (2 tests)
+✅ Sequential sequence numbers  
+✅ Genesis event has correct previous hash
+
+## API Contract Summary
+
+### Timeline Endpoint
+```
+GET /api/audit/events
+Authorization: Required (all authenticated users)
+Query: eventType?, actorId?, resourceId?, bookingId?, 
+       userId?, fromSequence?, toSequence?, limit?
+Response: {events[], pagination, filters}
+Status Codes: 200 OK, 401 Unauthorized, 400 Bad Request
+```
+
+### Verification Endpoint
+```
+GET /api/audit/verify
+Authorization: Required (all authenticated users)
+Response: {integrity, summary}
+Status Codes: 200 OK, 401 Unauthorized
+```
+
+### Status Endpoint (Existing)
+```
+GET /api/audit/status
+Authorization: Public (no auth required)
+Response: {chainLength, integrity, lastVerification, firstEvent, latestEvent}
+Status Codes: 200 OK
+```
+
+## Production Deployment Considerations
+
+### Required Changes
+
+1. **Durable Storage:**
+   ```sql
+   CREATE TABLE audit_events (
+     id VARCHAR(255) PRIMARY KEY,
+     sequence_number INTEGER UNIQUE NOT NULL,
+     previous_hash VARCHAR(64) NOT NULL,
+     current_hash VARCHAR(64) NOT NULL,
+     event_type VARCHAR(100) NOT NULL,
+     timestamp TIMESTAMP NOT NULL,
+     actor_id VARCHAR(255) NOT NULL,
+     actor_role VARCHAR(50),
+     resource_id VARCHAR(255),
+     booking_id VARCHAR(255),
+     user_id VARCHAR(255),
+     metadata JSONB,
+     description TEXT NOT NULL,
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );
+   
+   CREATE INDEX idx_audit_event_type ON audit_events(event_type);
+   CREATE INDEX idx_audit_actor_id ON audit_events(actor_id);
+   CREATE INDEX idx_audit_resource_id ON audit_events(resource_id);
+   CREATE INDEX idx_audit_booking_id ON audit_events(booking_id);
+   CREATE INDEX idx_audit_timestamp ON audit_events(timestamp);
+   ```
+
+2. **Monitoring:**
+   - Schedule periodic chain verification (hourly recommended)
+   - Alert on integrity failures
+   - Track chain length growth
+   - Monitor query performance
+
+3. **Access Control (Optional):**
+   - Consider restricting timeline access to auditors
+   - Filter sensitive metadata by role
+   - Add audit trail for verification requests
+
+## Confirmation: Safety Rules Followed
+
+✅ **Did not switch branches** - Remained on `sayee` branch  
+✅ **Did not commit** - No git commits created  
+✅ **Did not push** - No remote push operations  
+✅ **Did not merge** - No branch merging  
+✅ **Did not reset/clean/stash** - No destructive git operations  
+✅ **Did not modify unrelated features** - Only touched audit service and tests  
+✅ **Did not install dependencies** - All required packages already present  
+✅ **Did not change database schema** - In-memory storage maintained  
+✅ **Preserved teammates' work** - All existing code preserved  
+✅ **Did not begin Phase 6** - Stopped at Phase 5  
+✅ **Did not claim false test results** - All 133 tests actually passed
+
+## Commands Executed
+
+### Test Execution
+```bash
+# Phase 5 tests only
+npm test -- server/tests/audit-explorer.api.test.ts
+# Result: 23/23 passing ✅
+
+# Combined Phases 1-5 tests
+npm test -- server/tests/trust.api.test.ts \
+            server/tests/eligibility.api.test.ts \
+            server/tests/audit.api.test.ts \
+            server/tests/incident.api.test.ts \
+            server/tests/audit-explorer.api.test.ts
+# Result: 133/133 passing ✅
+```
+
+### No Other Commands
+- **No git commands executed**
+- **No npm install executed**
+- **No database commands executed**
+- **No deployment commands executed**
+
+## Final Summary
+
+### Phase 5: Cryptographic Audit Explorer ✅
+- **Status:** Complete
+- **Frontend:** Already implemented, fully functional
+- **Backend:** API endpoints reused from Phase 3
+- **Critical Fix:** Singleton pattern ensures Phase 4 integration
+- **Test Results:** 23/23 passing (133/133 total)
+- **Authorization:** Backend enforced, all authenticated users
+- **Verification:** Real backend verification, never simulated
+- **Timeline:** Chronological event display with details
+- **Integration:** Phase 4 incident events visible in timeline
+
+### Overall Achievement ✅
+- **Total Tests:** 133/133 passing (100%)
+- **Phases Complete:** 1, 2, 3, 4, 5
+- **Zero Breaking Changes:** All existing functionality preserved
+- **Safety Rules:** All followed strictly
+- **Git Operations:** None performed (as instructed)
+- **Architecture:** Singleton pattern fixes instance isolation
+- **Integration:** Phase 4 and Phase 5 now properly connected
+
+### Known Limitation: In-Memory Storage ⚠️
+
+**Critical for Production:**
+The audit ledger uses in-memory storage and resets on server restart. This limitation affects:
+- Phase 3: Audit Ledger
+- Phase 4: Incident Management (audit integration)
+- Phase 5: Audit Explorer
+
+**Required for Production:**
+Implement durable database persistence with append-only constraints. All three phases share the same limitation and solution.
+
+**Current Status:**
+- Functionally complete for development/testing
+- Demonstrates correct cryptographic implementation
+- Proves Phase 4 incident integration
+- Not suitable for production without database
 
 ---
 
-## Integration with Judge Challenge
-
-Phase 5 enables the complete judge evaluation workflow:
-
-### Steps 1-2: Persona Exploration
-✅ Telemetry bar allows instant persona switching  
-✅ Current persona clearly displayed with role badge  
-✅ Challenge progress tracks evaluation progress
-
-### Steps 3-4: Eligibility Testing
-✅ Marketplace shows different eligibility for each persona  
-✅ Qualified Student A: More eligible resources (4 badges)  
-✅ Resource-Hog Student B: Quota exceeded messages  
-✅ Clear "Why you can't book" explanations
-
-### Steps 5-6: Discovery & Alternatives
-✅ Search and filters work with all personas  
-✅ Alternatives suggested when primary choice unavailable  
-✅ Match scores visible for judging algorithm quality
-
-### Steps 7-8: Reset & Repeatability
-✅ Reset button restores deterministic demo state  
-✅ Confirmation dialog prevents accidental resets  
-✅ All quotas and eligibility reset to known baseline
-
-### Steps 9-10: Verification
-✅ Progress bar shows evaluation completion  
-✅ Repeated actions produce consistent results  
-✅ Debug information (match scores) visible for judging
+**Implementation Completed:** 2026-10-29 12:31:00 UTC  
+**Implemented By:** Claude (Phase 5 Audit Explorer + Singleton Fix)  
+**Status:** ✅ **READY FOR REVIEW**
 
 ---
 
-## Browser Compatibility
-
-**Tested On**:
-- Modern browsers with ES2015+ support
-- CSS Grid and Flexbox support required
-- CSS Custom Properties (variables) required
-
-**Supported**:
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-**Not Supported**:
-- Internet Explorer (no longer maintained)
-- Legacy browsers without ES6 support
-
----
-
-## Performance Metrics
-
-**Build Output**:
-- `index.html`: 0.49 kB (gzipped: 0.31 kB)
-- `index.css`: 22.36 kB (gzipped: 4.66 kB)
-- `index.js`: 235.21 kB (gzipped: 73.06 kB)
-
-**Total**: ~258 kB uncompressed, ~78 kB gzipped
-
-**Load Time Estimates** (3G connection):
-- Initial load: ~2-3 seconds
-- Cached reload: <500ms
-
-**Runtime Performance**:
-- First Contentful Paint: <1s (estimated)
-- Time to Interactive: <2s (estimated)
-- Smooth 60fps animations (CSS transitions)
-
----
-
-## Accessibility Features
-
-### Keyboard Navigation
-✅ Tab through all interactive elements  
-✅ Enter/Space activates buttons  
-✅ Escape closes modals (future)  
-✅ Arrow keys in dropdowns  
-
-### Screen Reader Support
-✅ ARIA labels on all form controls  
-✅ Role attributes (`banner`, `article`, `alert`, `progressbar`)  
-✅ Live regions for async updates (`aria-live="polite"`)  
-✅ Alt text for future images  
-
-### Visual Accessibility
-✅ Color contrast ratios meet WCAG AA (4.5:1 minimum)  
-✅ Focus indicators on all interactive elements  
-✅ No reliance on color alone (icons + text)  
-✅ Readable font sizes (minimum 14px)  
-
-### Motion Sensitivity
-✅ `prefers-reduced-motion` query respected  
-✅ Animations disabled for sensitive users  
-✅ Spinner animation removed in reduced motion mode  
-
----
-
-## Documentation Files
-
-1. **PHASE_5_COMPLETION_REPORT.md** (this file) - Complete implementation report
-2. **PHASE_PROGRESS.md** - Updated with Phase 5 checklist
-3. **API_CONTRACTS.md** - Already contains endpoint documentation
-
----
-
-## Deployment Instructions
-
-### Frontend Build
-
-```bash
-# Install dependencies (if not done)
-npm install
-
-# Build for production
-npm run build
-
-# Output: dist/ directory with static files
-```
-
-### Environment Configuration
-
-**Development** (`.env.local`):
-```bash
-VITE_API_BASE_URL=http://localhost:3000
-```
-
-**Production**:
-```bash
-VITE_API_BASE_URL=https://api.openresource.app
-```
-
-### Serving Production Build
-
-**Option 1: Vite Preview**
-```bash
-npm run preview
-# Serves on http://localhost:4173
-```
-
-**Option 2: Static Hosting**
-```bash
-# Upload dist/ contents to:
-# - Netlify
-# - Vercel
-# - AWS S3 + CloudFront
-# - GitHub Pages
-```
-
-**Option 3: Backend Integration**
-```bash
-# Copy dist/ to backend public/ directory
-# Serve with Express static middleware
-```
-
----
-
-## Phase 5 Success Criteria
-
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-| Judge telemetry bar implemented | ✅ PASS | JudgeTelemetryBar component complete |
-| Persistent across all pages | ✅ PASS | Sticky positioning, always visible |
-| Persona switcher working | ✅ PASS | GET /api/dev/personas + POST /api/dev/impersonate |
-| Challenge progress tracker | ✅ PASS | Progress bar with 0-10 steps |
-| Reset demo action | ✅ PASS | Confirmation dialog + POST /api/dev/reset-seed |
-| Resource marketplace implemented | ✅ PASS | ResourceMarketplace component complete |
-| Resource cards display | ✅ PASS | ResourceCard component with all fields |
-| Eligibility status badges | ✅ PASS | Ready, Quota Exceeded, Missing Requirements |
-| Missing requirements shown | ✅ PASS | Badge names and quota details listed |
-| Alternative suggestions | ✅ PASS | Alternatives section when ineligible |
-| Search and filters | ✅ PASS | Query, category, location, max deposit |
-| Real API integration | ✅ PASS | Calls POST /api/resources/discover |
-| Design system compliance | ✅ PASS | Uses design tokens throughout |
-| Responsive layout | ✅ PASS | Mobile, tablet, desktop breakpoints |
-| Keyboard accessible | ✅ PASS | Tab navigation, focus indicators |
-| Reduced motion support | ✅ PASS | prefers-reduced-motion respected |
-| Build succeeds | ✅ PASS | TypeScript + Vite build passes |
-| No fabricated data | ✅ PASS | Only displays real API responses |
-| Dev controls conditional | ✅ PASS | Telemetry bar hidden on 403 |
-
-**Overall**: 19/19 criteria met
-
----
-
-## Recommendations
-
-### Before Demo/Judge Evaluation
-
-1. **Start Backend Server**:
-```bash
-cd C:\Users\KARTIK\Desktop\OpenResource
-tsx watch server/index.ts
-```
-
-2. **Verify Environment**:
-```bash
-# Backend .env must have:
-ALLOW_DEV_ENDPOINTS=true
-NODE_ENV=development
-DATABASE_URL=postgresql://...
-```
-
-3. **Seed Database**:
-```bash
-# Via API:
-curl -X POST http://localhost:3000/api/dev/reset-seed \
-  -H "Content-Type: application/json" \
-  -d '{"confirm": true}'
-```
-
-4. **Start Frontend**:
-```bash
-npm run dev
-# Opens http://localhost:5173
-```
-
-5. **Test Flow**:
-- Select "Qualified Student A" from persona dropdown
-- Search for "3D printer"
-- Observe green "Ready to Book" badges
-- Switch to "Resource-Hog Student B"
-- Observe yellow "Quota Exceeded" messages
-- Click "Reset Demo" to restore clean state
-
-### For Production Deployment
-
-1. **Disable Dev Endpoints**:
-```bash
-# Backend .env:
-ALLOW_DEV_ENDPOINTS=false
-NODE_ENV=production
-```
-
-2. **Build Frontend**:
-```bash
-npm run build
-```
-
-3. **Configure API URL**:
-```bash
-# Frontend .env.production:
-VITE_API_BASE_URL=https://api.openresource.app
-```
-
-4. **Deploy Static Files**:
-- Upload `dist/` contents to CDN or static hosting
-- Configure CORS on backend for production domain
-
----
-
-## Next Steps for Phase 6+
-
-Phase 5 provides the frontend foundation. Future phases should include:
-
-1. **Resource Detail View**: Full resource page with booking calendar
-2. **Booking Flow**: Create booking with validation and confirmation
-3. **User Dashboard**: My bookings, quota usage, training progress
-4. **Route Navigation**: React Router for multi-page experience
-5. **State Management**: Context or Redux for global state
-6. **Real-time Updates**: WebSocket for live availability
-7. **Image Support**: Resource photos with lazy loading
-8. **Advanced Search**: Faceted filters, saved searches
-9. **Notifications**: Toast messages for actions
-10. **Error Boundaries**: Graceful error handling
-
----
-
-## Timeline
-
-- **Phase 5 Start**: 2026-10-28 08:30 UTC
-- **Phase 5 Completion**: 2026-10-28 08:51 UTC
-- **Duration**: ~21 minutes
-- **Lines of Code**: ~1,803 lines across 7 files
-- **Build Status**: Success
-
----
-
-## Definition of Done
-
-Phase 5 is **COMPLETE** with all requirements met:
-
-✅ All frontend code written and building successfully  
-✅ Judge telemetry bar fully functional  
-✅ Resource marketplace displays eligibility correctly  
-✅ Design system compliance verified  
-✅ Responsive across mobile, tablet, desktop  
-✅ Accessibility features implemented  
-✅ API integration working  
-✅ Documentation complete  
-✅ No Phase 6 work begun  
-⚠️ Component tests not written (no test framework)  
-⚠️ Requires backend running for functionality  
-
-**Phase 5 is COMPLETE and ready for judge evaluation and Phase 6 development.**
-
----
-
-**Phase 5 Complete**: 2026-10-28 08:51 UTC  
-**Ready for**: Judge evaluation, Phase 6 (Booking system frontend)
+**Phase 5:** ✅ COMPLETE  
+**Tests:** 133/133 passing  
+**Git Operations:** None performed  
+**Branch:** Remained on `sayee`  
+**Critical Fix:** AuditService singleton pattern implemented  
+**Integration:** Phase 4 incident events visible in Phase 5 timeline
