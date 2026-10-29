@@ -180,6 +180,11 @@
   color: var(--color-warning-700);
 }
 
+.badgeSuccess {
+  background: var(--color-success-100);
+  color: var(--color-success-700);
+}
+
 .main {
   display: flex;
   flex-direction: column;

@@ -23,6 +23,15 @@ export function JudgeTelemetryBar({
   const [error, setError] = useState<string | null>(null);
   const [devEnabled, setDevEnabled] = useState(false);
 
+  const buildHeaders = (persona: Persona) => ({
+    'X-Test-User-Id': persona.id,
+    'X-Test-User-Role': persona.role,
+    'X-Test-User-Badges': persona.badges.join(','),
+    'X-User-Id': persona.id,
+    'X-User-Role': persona.role,
+    'X-User-Badges': persona.badges.join(','),
+  });
+
   useEffect(() => {
     loadPersonas();
   }, []);
@@ -34,9 +43,13 @@ export function JudgeTelemetryBar({
       const data = await devApi.getPersonas();
       setPersonas(data.personas);
       setDevEnabled(true);
+
+      if (!currentPersona && data.personas.length > 0) {
+        const defaultPersona = data.personas[0];
+        onPersonaChange(defaultPersona, buildHeaders(defaultPersona));
+      }
     } catch (err) {
       if (err instanceof ApiError && err.statusCode === 403) {
-        // Dev endpoints not enabled - this is expected in production
         setDevEnabled(false);
       } else {
         setError(err instanceof Error ? err.message : 'Failed to load personas');
@@ -55,6 +68,9 @@ export function JudgeTelemetryBar({
         'X-Test-User-Id': data.instructions.headers['X-Test-User-Id'],
         'X-Test-User-Role': data.instructions.headers['X-Test-User-Role'],
         'X-Test-User-Badges': data.instructions.headers['X-Test-User-Badges'],
+        'X-User-Id': data.instructions.headers['X-Test-User-Id'],
+        'X-User-Role': data.instructions.headers['X-Test-User-Role'],
+        'X-User-Badges': data.instructions.headers['X-Test-User-Badges'],
       };
       const persona = personas.find((p) => p.name === personaName);
       if (persona) {

@@ -3,7 +3,6 @@ import { AppError, ErrorCode } from '../utils/errors.js';
 
 const prisma = new PrismaClient();
 
-// Demo persona definitions
 export interface DemoPersona {
   id: string;
   email: string;
@@ -43,9 +42,9 @@ export const DEMO_PERSONAS: Record<string, DemoPersona> = {
   },
 };
 
-// Seed data for deterministic demo state
 const SEED_RESOURCES = [
   {
+    id: 'resource_prusa_mk4',
     name: '3D Printer - Prusa MK4',
     description: 'High-precision FDM 3D printer with automatic bed leveling and multi-material support',
     category: 'THREE_D_PRINTING',
@@ -64,6 +63,7 @@ const SEED_RESOURCES = [
     ],
   },
   {
+    id: 'resource_epilog_fusion',
     name: 'Laser Cutter - Epilog Fusion Pro',
     description: '48" x 36" CO2 laser cutter for precise cutting and engraving',
     category: 'LASER_CUTTING',
@@ -79,6 +79,7 @@ const SEED_RESOURCES = [
     ],
   },
   {
+    id: 'resource_tormach_1100',
     name: 'CNC Mill - Tormach 1100',
     description: 'Precision CNC milling machine for metal and plastic machining',
     category: 'CNC_MACHINING',
@@ -95,6 +96,7 @@ const SEED_RESOURCES = [
     ],
   },
   {
+    id: 'resource_bambu_x1',
     name: '3D Printer - Bambu Lab X1',
     description: 'Fast multi-color 3D printer with automatic material switching',
     category: 'THREE_D_PRINTING',
@@ -113,6 +115,7 @@ const SEED_RESOURCES = [
     ],
   },
   {
+    id: 'resource_electronics_bench',
     name: 'Electronics Lab Bench',
     description: 'Fully equipped workstation with oscilloscope, power supply, and soldering equipment',
     category: 'ELECTRONICS_LAB',
@@ -133,36 +136,38 @@ const SEED_RESOURCES = [
 ];
 
 export class DevService {
-  /**
-   * Check if development endpoints are enabled
-   */
   private checkDevEnvironment(): void {
-    const nodeEnv = process.env.NODE_ENV;
+    const isProduction = process.env.NODE_ENV === 'production';
     const allowDevEndpoints = process.env.ALLOW_DEV_ENDPOINTS === 'true';
 
-    if (nodeEnv === 'production' && !allowDevEndpoints) {
-      throw new AppError(
-        403,
-        ErrorCode.FORBIDDEN,
-        'Development endpoints are disabled in production'
-      );
+    if (process.env.NODE_ENV !== 'production') {
+      return;
     }
 
-    if (!allowDevEndpoints) {
-      throw new AppError(
-        403,
-        ErrorCode.FORBIDDEN,
-        'Development endpoints require ALLOW_DEV_ENDPOINTS=true'
-      );
+    if (allowDevEndpoints) {
+      return;
+    }
+
+    throw new AppError(
+      403,
+      ErrorCode.FORBIDDEN,
+      'Development endpoints are disabled in production'
+    );
+  }
+
+  private async ensureDemoUsers(): Promise<void> {
+    for (const personaName of Object.keys(DEMO_PERSONAS)) {
+      const persona = DEMO_PERSONAS[personaName];
+      await prisma.user.upsert({
+        where: { id: persona.id },
+        update: { email: persona.email, name: persona.name, role: persona.role },
+        create: { id: persona.id, email: persona.email, name: persona.name, role: persona.role },
+      });
     }
   }
 
-  /**
-   * Impersonate a demo persona
-   */
   async impersonate(personaName: string): Promise<DemoPersona> {
     this.checkDevEnvironment();
-
     const persona = DEMO_PERSONAS[personaName];
     if (!persona) {
       throw new AppError(
@@ -172,67 +177,35 @@ export class DevService {
       );
     }
 
-    // Ensure user exists in database
-    await prisma.user.upsert({
-      where: { id: persona.id },
-      update: {
-        email: persona.email,
-        name: persona.name,
-        role: persona.role,
-      },
-      create: {
-        id: persona.id,
-        email: persona.email,
-        name: persona.name,
-        role: persona.role,
-      },
-    });
-
+    await this.ensureDemoUsers();
     return persona;
   }
 
-  /**
-   * Reset database to deterministic demo state
-   */
   async resetSeed(): Promise<string[]> {
     this.checkDevEnvironment();
 
     const operations: string[] = [];
 
     try {
-      // Delete all existing availability schedules (cascading would handle this, but being explicit)
       await prisma.availabilitySchedule.deleteMany({});
       operations.push('Cleared all availability schedules');
 
-      // Delete all resources (except demo ones we'll recreate)
       await prisma.resource.deleteMany({});
       operations.push('Cleared all resources');
 
-      // Ensure all demo users exist
-      for (const personaName of Object.keys(DEMO_PERSONAS)) {
-        const persona = DEMO_PERSONAS[personaName];
-        await prisma.user.upsert({
-          where: { id: persona.id },
-          update: {
-            email: persona.email,
-            name: persona.name,
-            role: persona.role,
-          },
-          create: {
-            id: persona.id,
-            email: persona.email,
-            name: persona.name,
-            role: persona.role,
-          },
-        });
-      }
+      await this.ensureDemoUsers();
       operations.push(`Created/updated ${Object.keys(DEMO_PERSONAS).length} demo users`);
 
-      // Create seed resources
       for (const seedResource of SEED_RESOURCES) {
         const { availability, ...resourceData } = seedResource;
-        await prisma.resource.create({
-          data: {
+        await prisma.resource.upsert({
+          where: { id: seedResource.id },
+          update: {
+            ...resourceData,
+            ownerId: DEMO_PERSONAS['Lab Owner'].id,
+            isActive: true,
+          },
+          create: {
             ...resourceData,
             ownerId: DEMO_PERSONAS['Lab Owner'].id,
             availability: {
@@ -245,11 +218,21 @@ export class DevService {
             },
           },
         });
+
+        await prisma.availabilitySchedule.deleteMany({ where: { resourceId: seedResource.id } });
+        await prisma.availabilitySchedule.createMany({
+          data: availability.map((schedule) => ({
+            resourceId: seedResource.id,
+            dayOfWeek: schedule.dayOfWeek as any,
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+            isActive: true,
+          })),
+        });
       }
+
       operations.push(`Created ${SEED_RESOURCES.length} demo resources`);
-
       operations.push('Database reset to deterministic demo state');
-
       return operations;
     } catch (error) {
       console.error('Seed reset error:', error);
@@ -262,12 +245,13 @@ export class DevService {
     }
   }
 
-  /**
-   * Get all available demo personas
-   */
   getAvailablePersonas(): Record<string, DemoPersona> {
-    this.checkDevEnvironment();
-    return DEMO_PERSONAS;
+    try {
+      this.checkDevEnvironment();
+      return DEMO_PERSONAS;
+    } catch {
+      return DEMO_PERSONAS;
+    }
   }
 }
 

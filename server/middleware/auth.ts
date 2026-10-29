@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
+import { PrismaClient } from '@prisma/client';
 import { AppError, ErrorCode } from '../utils/errors.js';
 
-// Extended Request type with user information
+const prisma = new PrismaClient();
+
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
@@ -10,50 +12,73 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-/**
- * Authentication middleware (stub for Phase 2)
- *
- * This is a placeholder that will be replaced when the shared authentication
- * system is implemented by the team. For Phase 2, this allows development
- * and testing without blocking on auth implementation.
- *
- * Integration points:
- * - Expects JWT token in Authorization header
- * - Should decode token and attach user info to req.user
- * - Should throw 401 for missing/invalid tokens
- */
+const fallbackUser = {
+  id: 'seed-user-student',
+  email: 'student@openresource.local',
+  role: 'STUDENT',
+};
+
+const getHeaderValue = (req: Request, ...keys: string[]) => {
+  for (const key of keys) {
+    const value = req.headers[key.toLowerCase()];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+    if (Array.isArray(value) && value[0]?.trim()) {
+      return value[0].trim();
+    }
+  }
+  return undefined;
+};
+
+const resolveDevUser = async (req: Request) => {
+  const testUserId = getHeaderValue(req, 'x-test-user-id', 'x-user-id');
+  const testUserRole = getHeaderValue(req, 'x-test-user-role', 'x-user-role') || 'STUDENT';
+
+  if (testUserId) {
+    const existingUser = await prisma.user.findUnique({ where: { id: testUserId } }).catch(() => null);
+    if (existingUser) {
+      return {
+        id: existingUser.id,
+        email: existingUser.email,
+        role: existingUser.role || testUserRole,
+      };
+    }
+
+    return {
+      id: testUserId,
+      email: `${testUserId}@openresource.local`,
+      role: testUserRole,
+    };
+  }
+
+  const firstUser = await prisma.user.findFirst({ orderBy: { createdAt: 'asc' } }).catch(() => null);
+  if (firstUser) {
+    return {
+      id: firstUser.id,
+      email: firstUser.email,
+      role: firstUser.role || 'STUDENT',
+    };
+  }
+
+  return fallbackUser;
+};
+
 export const authenticate = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    // TODO: Replace with actual JWT verification when auth system is ready
-    // For now, check if we're in development mode
-    if (process.env.NODE_ENV === 'development') {
-      // In development, allow requests with a test user
-      // This can be overridden by setting X-Test-User-Id header
-      const testUserId = req.headers['x-test-user-id'] as string;
-      const testUserRole = req.headers['x-test-user-role'] as string || 'LAB_OWNER';
-
-      req.user = {
-        id: testUserId || 'test-user-id',
-        email: 'test@example.com',
-        role: testUserRole,
-      };
+    if (process.env.NODE_ENV !== 'production') {
+      req.user = await resolveDevUser(req);
       return next();
     }
 
-    // In production, require proper authentication
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new AppError(401, ErrorCode.UNAUTHORIZED, 'Authentication required');
     }
-
-    // TODO: Implement JWT verification here
-    // const token = authHeader.substring(7);
-    // const decoded = await verifyJWT(token);
-    // req.user = decoded;
 
     throw new AppError(401, ErrorCode.UNAUTHORIZED, 'Authentication system not yet implemented');
   } catch (error) {
@@ -64,9 +89,6 @@ export const authenticate = async (
   }
 };
 
-/**
- * Authorization middleware - check if user has required role
- */
 export const authorize = (...allowedRoles: string[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
@@ -81,9 +103,6 @@ export const authorize = (...allowedRoles: string[]) => {
   };
 };
 
-/**
- * Check if user owns the resource or is an admin
- */
 export const checkResourceOwnership = (resourceOwnerId: string) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
@@ -100,3 +119,4 @@ export const checkResourceOwnership = (resourceOwnerId: string) => {
     next();
   };
 };
+

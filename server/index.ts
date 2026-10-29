@@ -1,40 +1,112 @@
+﻿import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 
-dotenv.config();
+import { resourceRoutes } from './routes/resource.routes.js';
+import { devRoutes } from './routes/dev.routes.js';
+import fairnessRoutes from './routes/fairnessRoutes.js';
+import { errorHandler } from './utils/errors.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT ?? 3000);
 
-// Middleware
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
-  credentials: true,
-}));
-app.use(express.json());
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-test-user-id',
+      'x-test-user-role',
+      'x-user-id',
+      'x-user-role',
+    ],
+  })
+);
+app.use(express.json({ limit: '1mb' }));
 
-// Health check
 app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
   });
 });
 
-// Import routes
-import { resourceRoutes } from './routes/resource.routes.js';
-import { devRoutes } from './routes/dev.routes.js';
-import { errorHandler } from './utils/errors.js';
-
-// API routes
 app.use('/api/resources', resourceRoutes);
-
-// Development-only routes (protected by service layer checks)
 app.use('/api/dev', devRoutes);
+app.use('/api/fairness', fairnessRoutes);
 
-// 404 handler
+const inspectionCatalog = [
+  {
+    id: 'insp_prusa_mk4_001',
+    resourceId: 'demo_resource_prusa_mk4',
+    resourceName: 'Prusa MK4 3D Printer',
+    timestamp: '2026-10-27T14:30:00.000Z',
+    overallCondition: 'GOOD',
+    damageCount: 2,
+  },
+  {
+    id: 'insp_prusa_mk4_002',
+    resourceId: 'demo_resource_prusa_mk4',
+    resourceName: 'Prusa MK4 3D Printer',
+    timestamp: '2026-10-28T16:45:00.000Z',
+    overallCondition: 'FAIR',
+    damageCount: 4,
+  },
+];
+
+app.get('/api/inspections', (_req: Request, res: Response) => {
+  res.json({
+    success: true,
+    data: {
+      inspections: inspectionCatalog,
+      total: inspectionCatalog.length,
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/api/inspections/:id', (req: Request, res: Response) => {
+  const inspection = {
+    id: req.params.id,
+    resourceId: 'demo_resource_prusa_mk4',
+    resourceName: 'Prusa MK4 3D Printer',
+    inspectorId: 'demo_lab_owner',
+    inspectorName: 'Dr. Sarah Martinez',
+    overallCondition: 'GOOD',
+    timestamp: '2026-10-27T14:30:00.000Z',
+    beforeImage: {
+      url: 'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=1200&q=80',
+      width: 1200,
+      height: 800,
+      boundingBoxes: [
+        { x: 180, y: 120, width: 140, height: 100, label: 'Nozzle wear', severity: 'MODERATE' },
+        { x: 420, y: 220, width: 160, height: 120, label: 'Build plate scratch', severity: 'MINOR' },
+      ],
+    },
+    afterImage: {
+      url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+      width: 1200,
+      height: 800,
+      boundingBoxes: [
+        { x: 110, y: 190, width: 150, height: 90, label: 'Replaced extruder block', severity: 'MINOR' },
+      ],
+    },
+    damageReport: [
+      { description: 'Nozzle wear detected on hotend assembly', severity: 'MODERATE', repairCost: 45.0 },
+      { description: 'Build plate surface scratching near rear-left corner', severity: 'MINOR', repairCost: 12.5 },
+    ],
+  };
+
+  res.json({
+    success: true,
+    data: { inspection },
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     error: {
@@ -45,22 +117,13 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-// Error handler (must be last)
 app.use(errorHandler);
 
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`🚀 OpenResource API Server`);
-    console.log(`📍 Running on http://localhost:${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 OpenResource Backend server running on http://localhost:${PORT}`);
 
-    const devEnabled = process.env.ALLOW_DEV_ENDPOINTS === 'true';
-    if (devEnabled) {
-      console.log(`🔧 Dev endpoints enabled at /api/dev/*`);
-    } else {
-      console.log(`🔒 Dev endpoints disabled (set ALLOW_DEV_ENDPOINTS=true to enable)`);
-    }
-  });
-}
+});
 
 export default app;
+
+
